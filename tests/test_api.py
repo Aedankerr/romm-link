@@ -67,6 +67,7 @@ def test_config_uses_docker_dns_defaults_not_ip_addresses(monkeypatch):
     assert response.status_code == 200
     body = response.json()
     assert body["docker_network"] == "romm"
+    assert body["romm_auth_configured"] is False
     assert body["emulator_browser_scheme"] == "http"
     assert body["romm_url"] == "http://romm:8080"
     assert body["emulators"] == {

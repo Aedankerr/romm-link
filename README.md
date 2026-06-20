@@ -86,6 +86,8 @@ The template uses port `8766` and mounts `/var/run/docker.sock` so romm-link can
 ```env
 ROMM_URL=http://romm:8080
 ROMM_API_KEY=
+ROMM_USERNAME=
+ROMM_PASSWORD=
 DOCKER_NETWORK=romm
 PCSX2_CONTAINER=pcsx2
 RPCS3_CONTAINER=rpcs3
@@ -95,6 +97,8 @@ RPCS3_WEB_URL=http://rpcs3:3000
 DOLPHIN_WEB_URL=http://dolphin:3000
 EMULATOR_BROWSER_SCHEME=http
 ```
+
+RomM game listing requires authentication on current RomM builds. Set either `ROMM_API_KEY` to a bearer token/API key, or set `ROMM_USERNAME` and `ROMM_PASSWORD` so romm-link can request `/api/token` automatically. Secrets are never returned by `/api/config`.
 
 ## Unraid notes
 

@@ -9,6 +9,8 @@ class Settings(BaseSettings):
 
     romm_url: str = Field(default="http://romm:8080", alias="ROMM_URL")
     romm_api_key: str = Field(default="", alias="ROMM_API_KEY")
+    romm_username: str = Field(default="", alias="ROMM_USERNAME")
+    romm_password: str = Field(default="", alias="ROMM_PASSWORD")
     docker_network: str = Field(default="romm", alias="DOCKER_NETWORK")
 
     pcsx2_container: str = Field(default="pcsx2", alias="PCSX2_CONTAINER")
@@ -30,6 +32,7 @@ class Settings(BaseSettings):
     def public_config(self) -> dict[str, object]:
         return {
             "romm_url": self.romm_url,
+            "romm_auth_configured": bool(self.romm_api_key or (self.romm_username and self.romm_password)),
             "docker_network": self.docker_network,
             "emulator_browser_scheme": self.emulator_browser_scheme,
             "emulators": self.emulator_config(),
