@@ -2,7 +2,7 @@
 
 romm-link is an Unraid-first companion launcher for RomM.
 
-It connects RomM to browser-accessible emulator containers such as:
+It discovers RomM and browser-accessible emulator containers such as:
 
 - PCSX2
 - RPCS3
@@ -10,37 +10,48 @@ It connects RomM to browser-accessible emulator containers such as:
 
 ## MVP scope
 
-This MVP is intentionally simple:
+This MVP includes:
 
 - FastAPI backend
-- Basic browser UI served from FastAPI
-- Docker socket control for starting/stopping existing emulator containers
-- Environment-variable based configuration
+- Browser health/discovery dashboard served from FastAPI
+- Docker socket discovery for RomM and supported emulator containers
+- RomM API status client
+- Docker Compose config using the existing external `romm` network
 - Unraid template starter
-
-## What this MVP does not do yet
-
-- It does not inject ROM files directly into emulators.
-- It does not provide true WebRTC game streaming.
-- It does not manage controller passthrough.
-- It does not replace RomM.
 
 ## Quick test
 
 ```bash
-docker compose up --build
+python -m pip install -r backend/requirements.txt
+python -m pytest tests/ -q
+uvicorn backend.app.main:app --host 0.0.0.0 --port 8766
 ```
 
 Open:
 
 ```text
-http://localhost:8787
+http://localhost:8766
 ```
 
-Backend health:
+Backend endpoints:
 
 ```text
-http://localhost:8787/api/health
+GET /api/health
+GET /api/config
+GET /api/discovery/docker
+GET /api/romm/status
+```
+
+## Docker Compose
+
+```bash
+docker compose up --build
+```
+
+The compose file expects an existing external Docker network named `romm`:
+
+```bash
+docker network create romm
 ```
 
 ## Environment variables
@@ -48,12 +59,13 @@ http://localhost:8787/api/health
 ```env
 ROMM_URL=http://romm:8080
 ROMM_API_KEY=
+DOCKER_NETWORK=romm
 PCSX2_CONTAINER=pcsx2
 RPCS3_CONTAINER=rpcs3
 DOLPHIN_CONTAINER=dolphin
-PCSX2_WEB_URL=http://192.168.1.200:3000
-RPCS3_WEB_URL=http://192.168.1.200:3001
-DOLPHIN_WEB_URL=http://192.168.1.200:3002
+PCSX2_WEB_URL=http://pcsx2:3000
+RPCS3_WEB_URL=http://rpcs3:3000
+DOLPHIN_WEB_URL=http://dolphin:3000
 ```
 
 ## Unraid notes
@@ -64,8 +76,20 @@ This container needs access to:
 /var/run/docker.sock
 ```
 
-That allows romm-link to start and stop emulator containers.
+That allows romm-link to discover emulator containers and their status.
 
-## First real milestone
+Use Docker DNS on the shared `romm` network instead of fixed IP addresses:
 
-The first real milestone is to make romm-link discover PS2, PS3, Wii and GameCube entries from RomM, then route each title to the matching emulator container.
+```text
+http://romm:8080
+http://pcsx2:3000
+http://rpcs3:3000
+http://dolphin:3000
+```
+
+## Milestones
+
+- v0.1: Discovery, health dashboard, Docker integration, RomM status integration, Unraid template
+- v0.2: Emulator launch, ROM launch, BIOS detection
+- v0.3: Streaming/session management
+- v1.0: Production release

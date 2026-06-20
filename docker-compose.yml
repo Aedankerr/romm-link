@@ -3,16 +3,23 @@ services:
     build: .
     container_name: romm-link
     ports:
-      - "8787:8787"
+      - "8766:8766"
     environment:
       ROMM_URL: "http://romm:8080"
       ROMM_API_KEY: ""
+      DOCKER_NETWORK: "romm"
       PCSX2_CONTAINER: "pcsx2"
       RPCS3_CONTAINER: "rpcs3"
       DOLPHIN_CONTAINER: "dolphin"
-      PCSX2_WEB_URL: "http://localhost:3000"
-      RPCS3_WEB_URL: "http://localhost:3001"
-      DOLPHIN_WEB_URL: "http://localhost:3002"
+      PCSX2_WEB_URL: "http://pcsx2:3000"
+      RPCS3_WEB_URL: "http://rpcs3:3000"
+      DOLPHIN_WEB_URL: "http://dolphin:3000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - romm
     restart: unless-stopped
+
+networks:
+  romm:
+    external: true
