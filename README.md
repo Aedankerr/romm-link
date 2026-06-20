@@ -8,14 +8,15 @@ It connects RomM to browser-accessible emulator containers such as:
 - RPCS3
 - Dolphin
 
-## What this MVP does
+## MVP scope
 
-- Provides a FastAPI backend.
-- Provides a simple frontend.
-- Reads config from environment variables.
-- Exposes emulator launch endpoints.
-- Uses Docker socket access to start existing emulator containers.
-- Includes an Unraid XML template starter.
+This MVP is intentionally simple:
+
+- FastAPI backend
+- Basic browser UI served from FastAPI
+- Docker socket control for starting/stopping existing emulator containers
+- Environment-variable based configuration
+- Unraid template starter
 
 ## What this MVP does not do yet
 
@@ -64,3 +65,7 @@ This container needs access to:
 ```
 
 That allows romm-link to start and stop emulator containers.
+
+## First real milestone
+
+The first real milestone is to make romm-link discover PS2, PS3, Wii and GameCube entries from RomM, then route each title to the matching emulator container.
