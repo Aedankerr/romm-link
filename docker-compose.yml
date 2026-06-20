@@ -1,0 +1,6 @@
+version: '3.9'
+services:
+  backend:
+    image: python:3.12
+  frontend:
+    image: node:22
