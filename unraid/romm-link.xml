@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Container version="2">
   <Name>romm-link</Name>
-  <Repository>ghcr.io/aedankerr/romm-link:latest</Repository>
-  <Registry>https://github.com/Aedankerr/romm-link</Registry>
+  <Repository>ghcr.io/aedankerr/romm-link:dev</Repository>
+  <Registry>https://github.com/Aedankerr/romm-link/pkgs/container/romm-link</Registry>
   <Network>romm</Network>
   <MyIP/>
   <Shell>sh</Shell>
@@ -12,8 +12,8 @@
   <Overview>Unraid-first companion launcher for RomM. Discovers RomM and emulator containers on the Docker network, then exposes a browser health/discovery dashboard.</Overview>
   <Category>GameServers: MediaApp:Other</Category>
   <WebUI>http://[IP]:[PORT:8766]/</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/Aedankerr/romm-link/main/unraid/romm-link.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/Aedankerr/romm-link/main/docs/icon.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/Aedankerr/romm-link/dev/unraid/romm-link.xml</TemplateURL>
+  <Icon></Icon>
   <ExtraParams/>
   <PostArgs/>
   <CPUset/>

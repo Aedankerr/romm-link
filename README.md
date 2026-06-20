@@ -54,6 +54,28 @@ The compose file expects an existing external Docker network named `romm`:
 docker network create romm
 ```
 
+## Unraid test pull
+
+The development branch publishes a test image to GitHub Container Registry:
+
+```text
+ghcr.io/aedankerr/romm-link:dev
+```
+
+Use this raw template URL for test installs before promoting to `main`:
+
+```text
+https://raw.githubusercontent.com/Aedankerr/romm-link/dev/unraid/romm-link.xml
+```
+
+On Unraid, make sure the external Docker network exists first:
+
+```bash
+docker network create romm
+```
+
+The template uses port `8766` and mounts `/var/run/docker.sock` so romm-link can discover RomM and emulator containers.
+
 ## Environment variables
 
 ```env
