@@ -67,6 +67,7 @@ def test_config_uses_docker_dns_defaults_not_ip_addresses(monkeypatch):
     assert response.status_code == 200
     body = response.json()
     assert body["docker_network"] == "romm"
+    assert body["emulator_browser_scheme"] == "http"
     assert body["romm_url"] == "http://romm:8080"
     assert body["emulators"] == {
         "pcsx2": {"container": "pcsx2", "web_url": "http://pcsx2:3000"},
@@ -135,6 +136,28 @@ def test_docker_discovery_reports_browser_urls_from_host_port_bindings(monkeypat
         "http://192.168.1.10:3001",
         "http://192.168.1.10:3002",
     ]
+
+
+def test_docker_discovery_defaults_browser_urls_to_http_even_when_romm_link_uses_https(monkeypatch):
+    from backend.app import discovery
+
+    fake_client = FakeDockerClient(
+        [
+            FakeContainer("romm", "rommapp/romm:latest"),
+            FakeContainer(
+                "pcsx2",
+                "lscr.io/linuxserver/pcsx2",
+                ports={"3000/tcp": [{"HostIp": "0.0.0.0", "HostPort": "3000"}]},
+            ),
+        ]
+    )
+    monkeypatch.setattr(discovery, "get_docker_client", lambda: fake_client)
+    client = TestClient(app, base_url="https://romm-link.example.test")
+
+    response = client.get("/api/discovery/docker")
+
+    assert response.status_code == 200
+    assert response.json()["emulators"][0]["browser_url"] == "http://romm-link.example.test:3000"
 
 
 def test_docker_discovery_reports_unavailable_socket(monkeypatch):

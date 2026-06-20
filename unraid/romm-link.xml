@@ -32,4 +32,5 @@
   <Config Name="PCSX2 Web URL" Target="PCSX2_WEB_URL" Default="http://pcsx2:3000" Description="Browser endpoint for PCSX2 via Docker DNS" Type="Variable" Display="advanced" Required="true" Mask="false">http://pcsx2:3000</Config>
   <Config Name="RPCS3 Web URL" Target="RPCS3_WEB_URL" Default="http://rpcs3:3000" Description="Browser endpoint for RPCS3 via Docker DNS" Type="Variable" Display="advanced" Required="true" Mask="false">http://rpcs3:3000</Config>
   <Config Name="Dolphin Web URL" Target="DOLPHIN_WEB_URL" Default="http://dolphin:3000" Description="Browser endpoint for Dolphin via Docker DNS" Type="Variable" Display="advanced" Required="true" Mask="false">http://dolphin:3000</Config>
+  <Config Name="Emulator Browser Scheme" Target="EMULATOR_BROWSER_SCHEME" Default="http" Description="URL scheme used for generated browser-facing emulator links. Keep http for linuxserver emulator containers unless you know their host ports serve HTTPS." Type="Variable" Display="advanced" Required="true" Mask="false">http</Config>
 </Container>

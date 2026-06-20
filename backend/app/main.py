@@ -31,10 +31,11 @@ def config():
 @app.get("/api/discovery/docker")
 def docker_discovery(request: Request):
     try:
+        settings = get_settings()
         return discover_docker(
-            get_settings(),
+            settings,
             browser_host=request.url.hostname,
-            scheme=request.url.scheme,
+            scheme=settings.emulator_browser_scheme,
         )
     except Exception as exc:  # pragma: no cover - exercised through HTTP behavior
         raise HTTPException(status_code=503, detail=str(exc)) from exc

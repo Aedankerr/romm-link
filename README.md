@@ -74,7 +74,7 @@ On Unraid, make sure the external Docker network exists first:
 docker network create romm
 ```
 
-The template uses port `8766` and mounts `/var/run/docker.sock` so romm-link can discover RomM and emulator containers. It also reads Docker port bindings to generate browser-facing emulator links, so Unraid host ports can differ while internal container ports stay at `3000`.
+The template uses port `8766` and mounts `/var/run/docker.sock` so romm-link can discover RomM and emulator containers. It also reads Docker port bindings to generate browser-facing emulator links, so Unraid host ports can differ while internal container ports stay at `3000`. Generated emulator browser links default to `http` via `EMULATOR_BROWSER_SCHEME=http`; change it only if your emulator host ports actually serve HTTPS.
 
 ## Environment variables
 
@@ -88,6 +88,7 @@ DOLPHIN_CONTAINER=dolphin
 PCSX2_WEB_URL=http://pcsx2:3000
 RPCS3_WEB_URL=http://rpcs3:3000
 DOLPHIN_WEB_URL=http://dolphin:3000
+EMULATOR_BROWSER_SCHEME=http
 ```
 
 ## Unraid notes

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     pcsx2_web_url: str = Field(default="http://pcsx2:3000", alias="PCSX2_WEB_URL")
     rpcs3_web_url: str = Field(default="http://rpcs3:3000", alias="RPCS3_WEB_URL")
     dolphin_web_url: str = Field(default="http://dolphin:3000", alias="DOLPHIN_WEB_URL")
+    emulator_browser_scheme: str = Field(default="http", alias="EMULATOR_BROWSER_SCHEME")
 
     def emulator_config(self) -> dict[str, dict[str, str]]:
         return {
@@ -30,6 +31,7 @@ class Settings(BaseSettings):
         return {
             "romm_url": self.romm_url,
             "docker_network": self.docker_network,
+            "emulator_browser_scheme": self.emulator_browser_scheme,
             "emulators": self.emulator_config(),
         }
 
