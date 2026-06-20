@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlparse
 
 import docker
 
@@ -14,6 +15,7 @@ class DiscoveredContainer:
     status: str
     networks: list[str]
     web_url: str | None = None
+    browser_url: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -26,6 +28,8 @@ class DiscoveredContainer:
             data["key"] = self.key
         if self.web_url is not None:
             data["web_url"] = self.web_url
+        if self.browser_url is not None:
+            data["browser_url"] = self.browser_url
         return data
 
 
@@ -60,7 +64,33 @@ def _container_networks(container: Any) -> list[str]:
     return sorted(networks.keys())
 
 
-def _discovered_container(container: Any, key: str | None = None, web_url: str | None = None) -> DiscoveredContainer:
+def _host_port_url(container: Any, internal_url: str | None, browser_host: str | None, scheme: str = "http") -> str | None:
+    if not internal_url or not browser_host:
+        return None
+
+    parsed = urlparse(internal_url)
+    if parsed.port is None:
+        return None
+
+    ports = getattr(container, "attrs", {}).get("NetworkSettings", {}).get("Ports", {})
+    bindings = ports.get(f"{parsed.port}/tcp") or ports.get(f"{parsed.port}/udp")
+    if not bindings:
+        return None
+
+    host_port = bindings[0].get("HostPort") if bindings[0] else None
+    if not host_port:
+        return None
+
+    return f"{scheme}://{browser_host}:{host_port}"
+
+
+def _discovered_container(
+    container: Any,
+    key: str | None = None,
+    web_url: str | None = None,
+    browser_host: str | None = None,
+    scheme: str = "http",
+) -> DiscoveredContainer:
     return DiscoveredContainer(
         key=key,
         name=getattr(container, "name", "unknown"),
@@ -68,6 +98,7 @@ def _discovered_container(container: Any, key: str | None = None, web_url: str |
         status=getattr(container, "status", "unknown"),
         networks=_container_networks(container),
         web_url=web_url,
+        browser_url=_host_port_url(container, web_url, browser_host, scheme),
     )
 
 
@@ -86,7 +117,11 @@ def _is_romm_container(container: Any) -> bool:
     return image.startswith("rommapp/romm") or image.startswith("ghcr.io/rommapp/romm")
 
 
-def discover_docker(settings: Settings | None = None) -> dict[str, Any]:
+def discover_docker(
+    settings: Settings | None = None,
+    browser_host: str | None = None,
+    scheme: str = "http",
+) -> dict[str, Any]:
     settings = settings or get_settings()
     client = get_docker_client()
     containers = client.containers.list(all=True)
@@ -106,7 +141,15 @@ def discover_docker(settings: Settings | None = None) -> dict[str, Any]:
             None,
         )
         if match is not None:
-            emulators.append(_discovered_container(match, key=key, web_url=config["web_url"]).as_dict())
+            emulators.append(
+                _discovered_container(
+                    match,
+                    key=key,
+                    web_url=config["web_url"],
+                    browser_host=browser_host,
+                    scheme=scheme,
+                ).as_dict()
+            )
 
     return {
         "network": settings.docker_network,

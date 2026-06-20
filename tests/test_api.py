@@ -5,13 +5,21 @@ from backend.app.main import app
 
 
 class FakeContainer:
-    def __init__(self, name, image="example/image", status="running", networks=None, image_property=None):
+    def __init__(
+        self,
+        name,
+        image="example/image",
+        status="running",
+        networks=None,
+        image_property=None,
+        ports=None,
+    ):
         self.name = name
         self._image = image if image_property is None else image_property
         self.status = status
         self.attrs = {
             "Config": {"Image": image},
-            "NetworkSettings": {"Networks": networks or {"romm": {}}},
+            "NetworkSettings": {"Networks": networks or {"romm": {}}, "Ports": ports or {}},
         }
 
     @property
@@ -90,6 +98,43 @@ def test_docker_discovery_finds_romm_and_supported_emulators(monkeypatch):
     assert body["romm"]["name"] == "romm"
     assert [item["key"] for item in body["emulators"]] == ["pcsx2", "rpcs3", "dolphin"]
     assert body["emulators"][0]["web_url"] == "http://pcsx2:3000"
+
+
+def test_docker_discovery_reports_browser_urls_from_host_port_bindings(monkeypatch):
+    from backend.app import discovery
+
+    fake_client = FakeDockerClient(
+        [
+            FakeContainer("romm", "rommapp/romm:latest"),
+            FakeContainer(
+                "pcsx2",
+                "lscr.io/linuxserver/pcsx2",
+                ports={"3000/tcp": [{"HostIp": "0.0.0.0", "HostPort": "3000"}]},
+            ),
+            FakeContainer(
+                "rpcs3",
+                "lscr.io/linuxserver/rpcs3",
+                ports={"3000/tcp": [{"HostIp": "0.0.0.0", "HostPort": "3001"}]},
+            ),
+            FakeContainer(
+                "dolphin",
+                "lscr.io/linuxserver/dolphin",
+                ports={"3000/tcp": [{"HostIp": "0.0.0.0", "HostPort": "3002"}]},
+            ),
+        ]
+    )
+    monkeypatch.setattr(discovery, "get_docker_client", lambda: fake_client)
+    client = TestClient(app)
+
+    response = client.get("/api/discovery/docker", headers={"host": "192.168.1.10:8766"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [item["browser_url"] for item in body["emulators"]] == [
+        "http://192.168.1.10:3000",
+        "http://192.168.1.10:3001",
+        "http://192.168.1.10:3002",
+    ]
 
 
 def test_docker_discovery_reports_unavailable_socket(monkeypatch):

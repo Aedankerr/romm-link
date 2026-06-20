@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
@@ -29,9 +29,13 @@ def config():
 
 
 @app.get("/api/discovery/docker")
-def docker_discovery():
+def docker_discovery(request: Request):
     try:
-        return discover_docker(get_settings())
+        return discover_docker(
+            get_settings(),
+            browser_host=request.url.hostname,
+            scheme=request.url.scheme,
+        )
     except Exception as exc:  # pragma: no cover - exercised through HTTP behavior
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -62,6 +66,8 @@ def index():
       .warn { color:#fbbf24; }
       pre { background:#020617; padding:14px; border-radius:10px; overflow:auto; border:1px solid #1e293b; }
       a { color:#7dd3fc; }
+      .emulator-link { display:inline-flex; align-items:center; margin:0 8px 8px 0; padding:10px 14px; border-radius:8px; background:#38bdf8; color:#082f49; font-weight:700; text-decoration:none; }
+      .emulator-link.disabled { background:#334155; color:#94a3b8; cursor:not-allowed; }
     </style>
   </head>
   <body>
@@ -80,6 +86,7 @@ def index():
         </section>
         <section class="card">
           <h2>Docker discovery</h2>
+          <div id="emulator-links"></div>
           <pre id="docker">Loading...</pre>
         </section>
         <section class="card">
@@ -96,15 +103,36 @@ def index():
           const data = await res.json();
           el.textContent = JSON.stringify(data, null, 2);
           el.className = res.ok ? 'ok' : 'warn';
+          return data;
         } catch (err) {
           el.textContent = String(err);
           el.className = 'warn';
+          return null;
         }
+      }
+      function renderEmulatorLinks(discovery) {
+        const el = document.getElementById('emulator-links');
+        const emulators = discovery && discovery.emulators ? discovery.emulators : [];
+        if (!emulators.length) {
+          el.innerHTML = '<p>No emulator containers detected yet.</p>';
+          return;
+        }
+        el.innerHTML = emulators.map((emu) => {
+          const label = `${emu.key || emu.name} (${emu.status})`;
+          if (emu.browser_url) {
+            return `<a class="emulator-link" href="${emu.browser_url}" target="_blank" rel="noopener">Open ${label}</a>`;
+          }
+          return `<span class="emulator-link disabled" title="No host port binding detected">${label}</span>`;
+        }).join('');
+      }
+      async function loadDiscovery() {
+        const data = await loadJson('/api/discovery/docker', 'docker');
+        renderEmulatorLinks(data);
       }
       function refreshAll() {
         loadJson('/api/health', 'health');
         loadJson('/api/config', 'config');
-        loadJson('/api/discovery/docker', 'docker');
+        loadDiscovery();
         loadJson('/api/romm/status', 'romm');
       }
       refreshAll();

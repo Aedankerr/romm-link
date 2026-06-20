@@ -74,7 +74,7 @@ On Unraid, make sure the external Docker network exists first:
 docker network create romm
 ```
 
-The template uses port `8766` and mounts `/var/run/docker.sock` so romm-link can discover RomM and emulator containers.
+The template uses port `8766` and mounts `/var/run/docker.sock` so romm-link can discover RomM and emulator containers. It also reads Docker port bindings to generate browser-facing emulator links, so Unraid host ports can differ while internal container ports stay at `3000`.
 
 ## Environment variables
 
