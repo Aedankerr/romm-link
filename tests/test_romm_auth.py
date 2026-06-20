@@ -55,7 +55,7 @@ def test_fetch_roms_uses_password_token_when_no_bearer_token(monkeypatch):
     assert FakeAsyncClient.calls[0] == (
         "POST",
         "http://romm:8080/api/token",
-        {"username": "aedan", "password": "secret"},
+        {"grant_type": "password", "username": "aedan", "password": "secret"},
         {},
     )
     assert FakeAsyncClient.calls[1] == (

@@ -17,7 +17,11 @@ async def fetch_token(settings: Settings) -> str:
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.post(
             _api_url(settings, "token"),
-            data={"username": settings.romm_username, "password": settings.romm_password},
+            data={
+                "grant_type": "password",
+                "username": settings.romm_username,
+                "password": settings.romm_password,
+            },
         )
         response.raise_for_status()
         token = response.json().get("access_token")
