@@ -129,6 +129,25 @@ def test_docker_discovery_uses_config_image_when_docker_image_inspect_is_missing
     assert response.json()["emulators"][0]["image"] == "linuxserver/pcsx2:old"
 
 
+def test_docker_discovery_does_not_treat_romm_link_as_romm(monkeypatch):
+    from backend.app import discovery
+
+    fake_client = FakeDockerClient(
+        [
+            FakeContainer("romm-link", "ghcr.io/aedankerr/romm-link:dev"),
+            FakeContainer("pcsx2", "lscr.io/linuxserver/pcsx2"),
+        ]
+    )
+    monkeypatch.setattr(discovery, "get_docker_client", lambda: fake_client)
+    client = TestClient(app)
+
+    response = client.get("/api/discovery/docker")
+
+    assert response.status_code == 200
+    assert response.json()["romm"] is None
+    assert response.json()["emulators"][0]["key"] == "pcsx2"
+
+
 def test_romm_status_endpoint_returns_client_result(monkeypatch):
     from backend.app import romm
 

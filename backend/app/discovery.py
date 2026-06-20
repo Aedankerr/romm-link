@@ -76,13 +76,23 @@ def _matches(container: Any, *needles: str) -> bool:
     return any(needle.lower() in haystack for needle in needles)
 
 
+def _is_romm_container(container: Any) -> bool:
+    name = getattr(container, "name", "").lower()
+    image = _container_image(container).lower()
+    if name == "romm":
+        return True
+    if "romm-link" in name or "romm-link" in image:
+        return False
+    return image.startswith("rommapp/romm") or image.startswith("ghcr.io/rommapp/romm")
+
+
 def discover_docker(settings: Settings | None = None) -> dict[str, Any]:
     settings = settings or get_settings()
     client = get_docker_client()
     containers = client.containers.list(all=True)
     emulators_config = settings.emulator_config()
 
-    romm = next((container for container in containers if _matches(container, "romm")), None)
+    romm = next((container for container in containers if _is_romm_container(container)), None)
     emulators = []
     for key, config in emulators_config.items():
         container_name = config["container"]
