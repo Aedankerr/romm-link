@@ -15,7 +15,10 @@ This MVP includes:
 - FastAPI backend
 - Browser health/discovery dashboard served from FastAPI
 - Docker socket discovery for RomM and supported emulator containers
+- Browser-facing emulator links from Docker port bindings
 - RomM API status client
+- RomM game list with PS2/PS3/GameCube/Wii emulator route hints
+- Launch planning endpoint that opens the matching emulator UI; direct ROM auto-start is a later milestone
 - Docker Compose config using the existing external `romm` network
 - Unraid template starter
 
@@ -40,6 +43,8 @@ GET /api/health
 GET /api/config
 GET /api/discovery/docker
 GET /api/romm/status
+GET /api/romm/games
+POST /api/launch/{rom_id}
 ```
 
 ## Docker Compose

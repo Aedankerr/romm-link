@@ -229,3 +229,51 @@ def test_romm_status_endpoint_returns_client_result(monkeypatch):
 
     assert response.status_code == 200
     assert response.json() == {"reachable": True, "url": "http://romm:8080", "status_code": 200}
+
+
+def test_romm_games_endpoint_enriches_games_with_launch_urls(monkeypatch):
+    from backend.app import discovery, romm
+
+    async def fake_roms(settings):
+        return [{"id": 1, "name": "Gran Turismo 4", "platform": "PlayStation 2"}]
+
+    def fake_discovery(settings, browser_host=None, scheme="http"):
+        return {"emulators": [{"key": "pcsx2", "browser_url": "http://192.168.1.10:3000"}]}
+
+    monkeypatch.setattr(romm, "fetch_roms", fake_roms)
+    monkeypatch.setattr(discovery, "discover_docker", fake_discovery)
+    client = TestClient(app)
+
+    response = client.get("/api/romm/games")
+
+    assert response.status_code == 200
+    assert response.json()["games"] == [
+        {
+            "id": 1,
+            "name": "Gran Turismo 4",
+            "platform": "PlayStation 2",
+            "emulator_key": "pcsx2",
+            "launch_url": "http://192.168.1.10:3000",
+            "supported": True,
+        }
+    ]
+
+
+def test_launch_endpoint_returns_open_emulator_plan(monkeypatch):
+    from backend.app import discovery, romm
+
+    async def fake_rom(settings, rom_id):
+        return {"id": rom_id, "name": "Gran Turismo 4", "platform": "PlayStation 2"}
+
+    def fake_discovery(settings, browser_host=None, scheme="http"):
+        return {"emulators": [{"key": "pcsx2", "browser_url": "http://192.168.1.10:3000"}]}
+
+    monkeypatch.setattr(romm, "fetch_rom", fake_rom)
+    monkeypatch.setattr(discovery, "discover_docker", fake_discovery)
+    client = TestClient(app)
+
+    response = client.post("/api/launch/1")
+
+    assert response.status_code == 200
+    assert response.json()["launch_url"] == "http://192.168.1.10:3000"
+    assert response.json()["emulator_key"] == "pcsx2"

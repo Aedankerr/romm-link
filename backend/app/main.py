@@ -2,8 +2,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
-from backend.app import romm
-from backend.app.discovery import discover_docker
+from backend.app import discovery, romm
+from backend.app.launcher import enrich_games_with_emulators, route_for_game
 from backend.app.settings import get_settings
 
 app = FastAPI(title="romm-link", version="0.1.0")
@@ -32,7 +32,7 @@ def config():
 def docker_discovery(request: Request):
     try:
         settings = get_settings()
-        return discover_docker(
+        return discovery.discover_docker(
             settings,
             browser_host=request.url.hostname,
             scheme=settings.emulator_browser_scheme,
@@ -44,6 +44,36 @@ def docker_discovery(request: Request):
 @app.get("/api/romm/status")
 async def romm_status():
     return await romm.fetch_romm_status(get_settings())
+
+
+@app.get("/api/romm/games")
+async def romm_games(request: Request):
+    try:
+        settings = get_settings()
+        games = await romm.fetch_roms(settings)
+        detected = discovery.discover_docker(
+            settings,
+            browser_host=request.url.hostname,
+            scheme=settings.emulator_browser_scheme,
+        )
+        return {"games": enrich_games_with_emulators(games, detected)}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/api/launch/{rom_id}")
+async def launch_rom(rom_id: int, request: Request):
+    try:
+        settings = get_settings()
+        game = await romm.fetch_rom(settings, rom_id)
+        detected = discovery.discover_docker(
+            settings,
+            browser_host=request.url.hostname,
+            scheme=settings.emulator_browser_scheme,
+        )
+        return route_for_game(game, detected)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -69,6 +99,9 @@ def index():
       a { color:#7dd3fc; }
       .emulator-link { display:inline-flex; align-items:center; margin:0 8px 8px 0; padding:10px 14px; border-radius:8px; background:#38bdf8; color:#082f49; font-weight:700; text-decoration:none; }
       .emulator-link.disabled { background:#334155; color:#94a3b8; cursor:not-allowed; }
+      .game-list { display:grid; gap:10px; margin-top:12px; }
+      .game { display:flex; justify-content:space-between; gap:12px; align-items:center; background:#0f172a; border:1px solid #334155; border-radius:10px; padding:10px 12px; }
+      .game small { color:#94a3b8; display:block; }
     </style>
   </head>
   <body>
@@ -93,6 +126,10 @@ def index():
         <section class="card">
           <h2>RomM API</h2>
           <pre id="romm">Loading...</pre>
+        </section>
+        <section class="card">
+          <h2>Games</h2>
+          <div id="games">Loading...</div>
         </section>
       </div>
     </main>
@@ -130,11 +167,44 @@ def index():
         const data = await loadJson('/api/discovery/docker', 'docker');
         renderEmulatorLinks(data);
       }
+      function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+      }
+      async function launchGame(id) {
+        const res = await fetch(`/api/launch/${id}`, { method: 'POST' });
+        const route = await res.json();
+        if (route.launch_url) {
+          window.open(route.launch_url, '_blank', 'noopener');
+        }
+        alert(route.message || JSON.stringify(route));
+      }
+      async function loadGames() {
+        const el = document.getElementById('games');
+        try {
+          const res = await fetch('/api/romm/games');
+          const data = await res.json();
+          const games = data.games || [];
+          if (!res.ok) throw new Error(JSON.stringify(data));
+          if (!games.length) {
+            el.innerHTML = '<p>No RomM games returned yet.</p>';
+            return;
+          }
+          el.innerHTML = `<div class="game-list">${games.map((game) => `
+            <div class="game">
+              <div><strong>${escapeHtml(game.name)}</strong><small>${escapeHtml(game.platform || 'Unknown platform')} ${game.emulator_key ? '→ ' + escapeHtml(game.emulator_key) : ''}</small></div>
+              ${game.supported ? `<button onclick="launchGame(${Number(game.id)})">Open emulator</button>` : '<span class="warn">Unsupported</span>'}
+            </div>
+          `).join('')}</div>`;
+        } catch (err) {
+          el.innerHTML = `<p class="warn">${escapeHtml(err.message || err)}</p>`;
+        }
+      }
       function refreshAll() {
         loadJson('/api/health', 'health');
         loadJson('/api/config', 'config');
         loadDiscovery();
         loadJson('/api/romm/status', 'romm');
+        loadGames();
       }
       refreshAll();
     </script>

@@ -11,9 +11,40 @@ def _headers(settings: Settings) -> dict[str, str]:
     return {"Authorization": f"Bearer {settings.romm_api_key}"}
 
 
+def _api_url(settings: Settings, path: str) -> str:
+    return f"{settings.romm_url.rstrip('/')}/api/{path.lstrip('/')}"
+
+
+def _extract_platform_name(raw: dict[str, Any]) -> str | None:
+    platform = raw.get("platform") or raw.get("platform_slug") or raw.get("platform_name")
+    if isinstance(platform, dict):
+        return platform.get("name") or platform.get("slug") or platform.get("fs_slug")
+    return platform
+
+
+def normalize_rom(raw: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": raw.get("id"),
+        "name": raw.get("name") or raw.get("fs_name") or raw.get("file_name") or "Unknown ROM",
+        "platform": _extract_platform_name(raw),
+        "path": raw.get("path") or raw.get("fs_path") or raw.get("file_path"),
+    }
+
+
+def _items(data: Any) -> list[dict[str, Any]]:
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        for key in ("items", "roms", "data", "results"):
+            value = data.get(key)
+            if isinstance(value, list):
+                return value
+    return []
+
+
 async def fetch_romm_status(settings: Settings | None = None) -> dict[str, Any]:
     settings = settings or get_settings()
-    health_url = f"{settings.romm_url.rstrip('/')}/api/heartbeat"
+    health_url = _api_url(settings, "heartbeat")
     try:
         async with httpx.AsyncClient(timeout=5.0, headers=_headers(settings)) as client:
             response = await client.get(health_url)
@@ -25,3 +56,19 @@ async def fetch_romm_status(settings: Settings | None = None) -> dict[str, Any]:
         "url": settings.romm_url,
         "status_code": response.status_code,
     }
+
+
+async def fetch_roms(settings: Settings | None = None) -> list[dict[str, Any]]:
+    settings = settings or get_settings()
+    async with httpx.AsyncClient(timeout=15.0, headers=_headers(settings)) as client:
+        response = await client.get(_api_url(settings, "roms"), params={"limit": 200})
+        response.raise_for_status()
+        return [normalize_rom(item) for item in _items(response.json())]
+
+
+async def fetch_rom(settings: Settings | None, rom_id: int) -> dict[str, Any]:
+    settings = settings or get_settings()
+    async with httpx.AsyncClient(timeout=15.0, headers=_headers(settings)) as client:
+        response = await client.get(_api_url(settings, f"roms/{rom_id}"))
+        response.raise_for_status()
+        return normalize_rom(response.json())
