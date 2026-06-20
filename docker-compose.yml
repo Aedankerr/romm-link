@@ -1,6 +1,18 @@
-version: '3.9'
 services:
-  backend:
-    image: python:3.12
-  frontend:
-    image: node:22
+  romm-link:
+    build: .
+    container_name: romm-link
+    ports:
+      - "8787:8787"
+    environment:
+      ROMM_URL: "http://romm:8080"
+      ROMM_API_KEY: ""
+      PCSX2_CONTAINER: "pcsx2"
+      RPCS3_CONTAINER: "rpcs3"
+      DOLPHIN_CONTAINER: "dolphin"
+      PCSX2_WEB_URL: "http://localhost:3000"
+      RPCS3_WEB_URL: "http://localhost:3001"
+      DOLPHIN_WEB_URL: "http://localhost:3002"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
