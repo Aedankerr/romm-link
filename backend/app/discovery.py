@@ -34,7 +34,15 @@ def get_docker_client():
 
 
 def _container_image(container: Any) -> str:
-    image = getattr(container, "image", "")
+    config_image = getattr(container, "attrs", {}).get("Config", {}).get("Image")
+    if config_image:
+        return str(config_image)
+
+    try:
+        image = getattr(container, "image", "")
+    except Exception:
+        return "unknown"
+
     if isinstance(image, str):
         return image
     tags = getattr(image, "tags", None)

@@ -5,14 +5,20 @@ from backend.app.main import app
 
 
 class FakeContainer:
-    def __init__(self, name, image="example/image", status="running", networks=None):
+    def __init__(self, name, image="example/image", status="running", networks=None, image_property=None):
         self.name = name
-        self.image = image
+        self._image = image if image_property is None else image_property
         self.status = status
         self.attrs = {
             "Config": {"Image": image},
             "NetworkSettings": {"Networks": networks or {"romm": {}}},
         }
+
+    @property
+    def image(self):
+        if isinstance(self._image, Exception):
+            raise self._image
+        return self._image
 
 
 class FakeContainers:
@@ -99,6 +105,28 @@ def test_docker_discovery_reports_unavailable_socket(monkeypatch):
 
     assert response.status_code == 503
     assert response.json()["detail"] == "docker socket unavailable"
+
+
+def test_docker_discovery_uses_config_image_when_docker_image_inspect_is_missing(monkeypatch):
+    from backend.app import discovery
+
+    fake_client = FakeDockerClient(
+        [
+            FakeContainer("romm", "rommapp/romm:latest"),
+            FakeContainer(
+                "old-emulator",
+                "linuxserver/pcsx2:old",
+                image_property=RuntimeError("No such image: sha256:missing"),
+            ),
+        ]
+    )
+    monkeypatch.setattr(discovery, "get_docker_client", lambda: fake_client)
+    client = TestClient(app)
+
+    response = client.get("/api/discovery/docker")
+
+    assert response.status_code == 200
+    assert response.json()["emulators"][0]["image"] == "linuxserver/pcsx2:old"
 
 
 def test_romm_status_endpoint_returns_client_result(monkeypatch):
