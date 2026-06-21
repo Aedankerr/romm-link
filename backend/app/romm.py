@@ -31,6 +31,7 @@ async def fetch_token(settings: Settings) -> str:
                 "grant_type": "password",
                 "username": settings.romm_username,
                 "password": settings.romm_password,
+                "scope": "read:roms read:platforms",
             },
         )
         response.raise_for_status()
@@ -87,21 +88,30 @@ async def fetch_romm_status(settings: Settings | None = None) -> dict[str, Any]:
     }
 
 
-async def fetch_roms(settings: Settings | None = None) -> list[dict[str, Any]]:
-    settings = settings or get_settings()
+async def _get_json(settings: Settings, path: str, params: dict[str, Any] | None = None) -> Any:
     headers = await _headers(settings)
     auth = None if headers else _basic_auth(settings)
     async with httpx.AsyncClient(timeout=15.0, headers=headers, auth=auth) as client:
-        response = await client.get(_api_url(settings, "roms"), params={"limit": 200})
-        response.raise_for_status()
-        return [normalize_rom(item) for item in _items(response.json())]
+        response = await client.get(_api_url(settings, path), params=params)
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            basic_auth = _basic_auth(settings)
+            if exc.response.status_code in {401, 403} and headers and basic_auth:
+                async with httpx.AsyncClient(timeout=15.0, headers={}, auth=basic_auth) as retry_client:
+                    retry_response = await retry_client.get(_api_url(settings, path), params=params)
+                    retry_response.raise_for_status()
+                    return retry_response.json()
+            raise
+        return response.json()
+
+
+async def fetch_roms(settings: Settings | None = None) -> list[dict[str, Any]]:
+    settings = settings or get_settings()
+    data = await _get_json(settings, "roms", params={"limit": 200})
+    return [normalize_rom(item) for item in _items(data)]
 
 
 async def fetch_rom(settings: Settings | None, rom_id: int) -> dict[str, Any]:
     settings = settings or get_settings()
-    headers = await _headers(settings)
-    auth = None if headers else _basic_auth(settings)
-    async with httpx.AsyncClient(timeout=15.0, headers=headers, auth=auth) as client:
-        response = await client.get(_api_url(settings, f"roms/{rom_id}"))
-        response.raise_for_status()
-        return normalize_rom(response.json())
+    return normalize_rom(await _get_json(settings, f"roms/{rom_id}"))

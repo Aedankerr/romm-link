@@ -99,7 +99,7 @@ EMULATOR_BROWSER_SCHEME=http
 ROMM_LINK_CONFIG_PATH=/config/settings.json
 ```
 
-RomM game listing requires authentication on current RomM builds. Set either `ROMM_API_KEY` to a bearer token/API key, or set `ROMM_USERNAME` and `ROMM_PASSWORD` so romm-link can request `/api/token` automatically. If token login is rejected, romm-link falls back to HTTP Basic auth with the same username/password. Secrets are never returned by `/api/config`.
+RomM game listing requires authentication on current RomM builds. Set either `ROMM_API_KEY` to a bearer token/API key, or set `ROMM_USERNAME` and `ROMM_PASSWORD` so romm-link can request a scoped `/api/token` automatically (`read:roms read:platforms`). If token login is rejected or the scoped token is forbidden, romm-link falls back to HTTP Basic auth with the same username/password. Secrets are never returned by `/api/config`.
 
 If auth was forgotten during Docker/Unraid setup, open the romm-link dashboard and use the **RomM login** form. The form writes runtime overrides to `/config/settings.json`, so map `/config` to persistent appdata if you want those changes to survive container replacement.
 

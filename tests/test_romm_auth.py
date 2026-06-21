@@ -56,6 +56,17 @@ class TokenRejectingAsyncClient(FakeAsyncClient):
         return FakeResponse(status_code=401, request_url=url)
 
 
+class ScopedTokenForbiddenAsyncClient(FakeAsyncClient):
+    get_count = 0
+
+    async def get(self, url, params=None):
+        self.__class__.get_count += 1
+        self.calls.append(("GET", url, params, dict(self.headers), self.auth))
+        if self.__class__.get_count == 1:
+            return FakeResponse(status_code=403, request_url=url)
+        return await super().get(url, params=params)
+
+
 def test_fetch_roms_uses_password_token_when_no_bearer_token(monkeypatch):
     FakeAsyncClient.calls = []
     monkeypatch.setattr(romm.httpx, "AsyncClient", FakeAsyncClient)
@@ -67,7 +78,12 @@ def test_fetch_roms_uses_password_token_when_no_bearer_token(monkeypatch):
     assert FakeAsyncClient.calls[0] == (
         "POST",
         "http://romm:8080/api/token",
-        {"grant_type": "password", "username": "aedan", "password": "secret"},
+        {
+            "grant_type": "password",
+            "username": "aedan",
+            "password": "secret",
+            "scope": "read:roms read:platforms",
+        },
         {},
         None,
     )
@@ -91,7 +107,12 @@ def test_fetch_roms_falls_back_to_basic_auth_when_token_login_is_rejected(monkey
     assert TokenRejectingAsyncClient.calls[0][0:3] == (
         "POST",
         "http://romm:8080/api/token",
-        {"grant_type": "password", "username": "aedan", "password": "secret"},
+        {
+            "grant_type": "password",
+            "username": "aedan",
+            "password": "secret",
+            "scope": "read:roms read:platforms",
+        },
     )
     assert TokenRejectingAsyncClient.calls[1][0:4] == (
         "GET",
@@ -101,3 +122,18 @@ def test_fetch_roms_falls_back_to_basic_auth_when_token_login_is_rejected(monkey
     )
     basic_auth = TokenRejectingAsyncClient.calls[1][4]
     assert isinstance(basic_auth, romm.httpx.BasicAuth)
+
+
+def test_fetch_roms_retries_basic_auth_when_scoped_token_is_forbidden(monkeypatch):
+    ScopedTokenForbiddenAsyncClient.calls = []
+    ScopedTokenForbiddenAsyncClient.get_count = 0
+    monkeypatch.setattr(romm.httpx, "AsyncClient", ScopedTokenForbiddenAsyncClient)
+    settings = Settings(ROMM_URL="http://romm:8080", ROMM_USERNAME="aedan", ROMM_PASSWORD="secret")
+
+    games = asyncio.run(romm.fetch_roms(settings))
+
+    assert games == [{"id": 1, "name": "Gran Turismo 4", "platform": "PlayStation 2", "path": None}]
+    first_get = ScopedTokenForbiddenAsyncClient.calls[1]
+    retry_get = ScopedTokenForbiddenAsyncClient.calls[2]
+    assert first_get[3] == {"Authorization": "Bearer test-token"}
+    assert isinstance(retry_get[4], romm.httpx.BasicAuth)
