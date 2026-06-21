@@ -23,6 +23,7 @@
   <Requires>Existing Docker network named romm and access to /var/run/docker.sock.</Requires>
   <Config Name="Web UI Port" Target="8766" Default="8766" Mode="tcp" Description="romm-link dashboard/API port" Type="Port" Display="always" Required="true" Mask="false">8766</Config>
   <Config Name="Docker Socket" Target="/var/run/docker.sock" Default="/var/run/docker.sock" Mode="rw" Description="Allows romm-link to discover RomM/emulator containers and their status" Type="Path" Display="always" Required="true" Mask="false">/var/run/docker.sock</Config>
+  <Config Name="Appdata" Target="/config" Default="/mnt/user/appdata/romm-link" Mode="rw" Description="Persistent romm-link settings saved from the web UI" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/romm-link</Config>
   <Config Name="RomM URL" Target="ROMM_URL" Default="http://romm:8080" Description="RomM API base URL. Use Docker DNS on the romm network; do not use fixed IP addresses." Type="Variable" Display="always" Required="true" Mask="false">http://romm:8080</Config>
   <Config Name="RomM API Key" Target="ROMM_API_KEY" Default="" Description="Optional RomM bearer token/API key for authenticated API calls. If blank, romm-link can use RomM username/password below." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
   <Config Name="RomM Username" Target="ROMM_USERNAME" Default="" Description="Optional RomM username for OAuth password login when no API key is provided" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>

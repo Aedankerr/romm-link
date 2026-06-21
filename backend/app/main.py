@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse
 
 from backend.app import discovery, romm
 from backend.app.launcher import enrich_games_with_emulators, route_for_game
-from backend.app.settings import get_settings
+from backend.app.settings import get_settings, runtime_config_public, save_runtime_config
 
 app = FastAPI(title="romm-link", version="0.1.0")
 
@@ -26,6 +26,17 @@ def health():
 @app.get("/api/config")
 def config():
     return get_settings().public_config()
+
+
+@app.get("/api/runtime-config")
+def get_runtime_config():
+    return runtime_config_public(get_settings())
+
+
+@app.post("/api/runtime-config")
+def update_runtime_config(payload: dict[str, object]):
+    save_runtime_config(get_settings(), payload)
+    return {"saved": True, "config": runtime_config_public(get_settings())}
 
 
 @app.get("/api/discovery/docker")
@@ -102,6 +113,9 @@ def index():
       .game-list { display:grid; gap:10px; margin-top:12px; }
       .game { display:flex; justify-content:space-between; gap:12px; align-items:center; background:#0f172a; border:1px solid #334155; border-radius:10px; padding:10px 12px; }
       .game small { color:#94a3b8; display:block; }
+      label { display:block; color:#cbd5e1; font-size:13px; margin:10px 0 4px; }
+      input { width:100%; box-sizing:border-box; padding:10px 12px; border-radius:8px; border:1px solid #334155; background:#020617; color:#e5e7eb; }
+      .hint { color:#94a3b8; font-size:13px; }
     </style>
   </head>
   <body>
@@ -117,6 +131,22 @@ def index():
         <section class="card">
           <h2>Configuration</h2>
           <pre id="config">Loading...</pre>
+        </section>
+        <section class="card">
+          <h2>RomM login</h2>
+          <p class="hint">Forgot to set RomM auth in Docker? Save it here. Values are stored in /config/settings.json and secrets are never displayed.</p>
+          <form id="runtime-config-form" onsubmit="saveRuntimeConfig(event)">
+            <label for="romm-url">RomM URL</label>
+            <input id="romm-url" name="romm_url" placeholder="http://romm:8080" />
+            <label for="romm-username">RomM username</label>
+            <input id="romm-username" name="romm_username" autocomplete="username" />
+            <label for="romm-password">RomM password</label>
+            <input id="romm-password" name="romm_password" type="password" autocomplete="current-password" placeholder="Leave blank to keep existing password" />
+            <label for="romm-api-key">RomM API key / bearer token</label>
+            <input id="romm-api-key" name="romm_api_key" type="password" placeholder="Leave blank to use username/password" />
+            <button type="submit">Save RomM settings</button>
+            <span id="runtime-config-status" class="hint"></span>
+          </form>
         </section>
         <section class="card">
           <h2>Docker discovery</h2>
@@ -147,6 +177,45 @@ def index():
           el.className = 'warn';
           return null;
         }
+      }
+      async function loadRuntimeConfig() {
+        const res = await fetch('/api/runtime-config');
+        const data = await res.json();
+        if (!res.ok) return;
+        document.getElementById('romm-url').value = data.romm_url || 'http://romm:8080';
+        document.getElementById('romm-username').value = data.romm_username || '';
+        document.getElementById('runtime-config-status').textContent = [
+          data.romm_api_key_configured ? 'API key saved' : '',
+          data.romm_password_configured ? 'password saved' : ''
+        ].filter(Boolean).join(' · ');
+      }
+      async function saveRuntimeConfig(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const payload = {
+          romm_url: form.romm_url.value || 'http://romm:8080',
+          romm_username: form.romm_username.value || '',
+          romm_api_key: form.romm_api_key.value || '',
+        };
+        if (form.romm_password.value) payload.romm_password = form.romm_password.value;
+        const status = document.getElementById('runtime-config-status');
+        status.textContent = 'Saving...';
+        const res = await fetch('/api/runtime-config', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          status.textContent = `Save failed: ${JSON.stringify(data)}`;
+          status.className = 'warn';
+          return;
+        }
+        form.romm_password.value = '';
+        form.romm_api_key.value = '';
+        status.textContent = 'Saved. Refreshing...';
+        status.className = 'ok';
+        refreshAll();
       }
       function renderEmulatorLinks(discovery) {
         const el = document.getElementById('emulator-links');
@@ -202,6 +271,7 @@ def index():
       function refreshAll() {
         loadJson('/api/health', 'health');
         loadJson('/api/config', 'config');
+        loadRuntimeConfig();
         loadDiscovery();
         loadJson('/api/romm/status', 'romm');
         loadGames();
