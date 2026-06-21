@@ -9,8 +9,18 @@ async def _headers(settings: Settings) -> dict[str, str]:
     if settings.romm_api_key:
         return {"Authorization": f"Bearer {settings.romm_api_key}"}
     if settings.romm_username and settings.romm_password:
-        return {"Authorization": f"Bearer {await fetch_token(settings)}"}
+        try:
+            return {"Authorization": f"Bearer {await fetch_token(settings)}"}
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code not in {401, 403}:
+                raise
     return {}
+
+
+def _basic_auth(settings: Settings) -> httpx.BasicAuth | None:
+    if settings.romm_username and settings.romm_password:
+        return httpx.BasicAuth(settings.romm_username, settings.romm_password)
+    return None
 
 
 async def fetch_token(settings: Settings) -> str:
@@ -79,7 +89,9 @@ async def fetch_romm_status(settings: Settings | None = None) -> dict[str, Any]:
 
 async def fetch_roms(settings: Settings | None = None) -> list[dict[str, Any]]:
     settings = settings or get_settings()
-    async with httpx.AsyncClient(timeout=15.0, headers=await _headers(settings)) as client:
+    headers = await _headers(settings)
+    auth = None if headers else _basic_auth(settings)
+    async with httpx.AsyncClient(timeout=15.0, headers=headers, auth=auth) as client:
         response = await client.get(_api_url(settings, "roms"), params={"limit": 200})
         response.raise_for_status()
         return [normalize_rom(item) for item in _items(response.json())]
@@ -87,7 +99,9 @@ async def fetch_roms(settings: Settings | None = None) -> list[dict[str, Any]]:
 
 async def fetch_rom(settings: Settings | None, rom_id: int) -> dict[str, Any]:
     settings = settings or get_settings()
-    async with httpx.AsyncClient(timeout=15.0, headers=await _headers(settings)) as client:
+    headers = await _headers(settings)
+    auth = None if headers else _basic_auth(settings)
+    async with httpx.AsyncClient(timeout=15.0, headers=headers, auth=auth) as client:
         response = await client.get(_api_url(settings, f"roms/{rom_id}"))
         response.raise_for_status()
         return normalize_rom(response.json())
