@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     rpcs3_web_url: str = Field(default="http://rpcs3:3000", alias="RPCS3_WEB_URL")
     dolphin_web_url: str = Field(default="http://dolphin:3000", alias="DOLPHIN_WEB_URL")
     emulator_browser_scheme: str = Field(default="http", alias="EMULATOR_BROWSER_SCHEME")
+    romm_path_prefix: str = Field(default="roms", alias="ROMM_PATH_PREFIX")
+    emulator_rom_path_prefix: str = Field(default="/roms", alias="EMULATOR_ROM_PATH_PREFIX")
+    emulator_display: str = Field(default=":1", alias="EMULATOR_DISPLAY")
     runtime_config_path: str = Field(default="/config/settings.json", alias="ROMM_LINK_CONFIG_PATH")
 
     def emulator_config(self) -> dict[str, dict[str, str]]:
@@ -39,6 +42,9 @@ class Settings(BaseSettings):
             "romm_auth_configured": bool(self.romm_api_key or (self.romm_username and self.romm_password)),
             "docker_network": self.docker_network,
             "emulator_browser_scheme": self.emulator_browser_scheme,
+            "romm_path_prefix": self.romm_path_prefix,
+            "emulator_rom_path_prefix": self.emulator_rom_path_prefix,
+            "emulator_display": self.emulator_display,
             "emulators": self.emulator_config(),
         }
 

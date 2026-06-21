@@ -11,4 +11,4 @@ def test_dashboard_uses_inline_launch_status_not_alerts():
     assert response.status_code == 200
     assert "alert(" not in response.text
     assert 'id="launch-status"' in response.text
-    assert "Open ${escapeHtml(game.emulator_key)}" in response.text
+    assert "Launch ${escapeHtml(game.emulator_key)}" in response.text

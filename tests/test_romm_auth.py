@@ -137,3 +137,40 @@ def test_fetch_roms_retries_basic_auth_when_scoped_token_is_forbidden(monkeypatc
     retry_get = ScopedTokenForbiddenAsyncClient.calls[2]
     assert first_get[3] == {"Authorization": "Bearer test-token"}
     assert isinstance(retry_get[4], romm.httpx.BasicAuth)
+
+
+def test_normalize_rom_preserves_launch_file_fields():
+    raw = {
+        "id": 6789,
+        "name": "101-in-1 Sports",
+        "platform": {"fs_slug": "wii"},
+        "path": "roms/wii",
+        "file_path": "roms/wii/101-in-1 Sports [SOIEEB].rvz",
+        "file_name": "101-in-1 Sports [SOIEEB].rvz",
+    }
+
+    normalized = romm.normalize_rom(raw)
+
+    assert normalized["file_path"] == "roms/wii/101-in-1 Sports [SOIEEB].rvz"
+    assert normalized["file_name"] == "101-in-1 Sports [SOIEEB].rvz"
+
+
+def test_fetch_rom_unwraps_detail_response_before_normalizing(monkeypatch):
+    async def fake_get_json(settings, path, params=None):
+        return {
+            "rom": {
+                "id": 6789,
+                "name": "101-in-1 Sports",
+                "platform": {"fs_slug": "wii"},
+                "path": "roms/wii",
+                "file_path": "roms/wii/101-in-1 Sports [SOIEEB].rvz",
+            }
+        }
+
+    monkeypatch.setattr(romm, "_get_json", fake_get_json)
+
+    game = asyncio.run(romm.fetch_rom(Settings(), 6789))
+
+    assert game["id"] == 6789
+    assert game["platform"] == "wii"
+    assert game["file_path"] == "roms/wii/101-in-1 Sports [SOIEEB].rvz"

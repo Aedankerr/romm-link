@@ -18,7 +18,7 @@ This MVP includes:
 - Browser-facing emulator links from Docker port bindings
 - RomM API status client
 - RomM game list with PS2/PS3/GameCube/Wii emulator route hints
-- Launch planning endpoint that opens the matching emulator UI; direct ROM auto-start is a later milestone
+- Launch endpoint that starts the matching ROM inside the emulator container, then opens the emulator web UI
 - Docker Compose config using the existing external `romm` network
 - Unraid template starter
 
@@ -79,7 +79,9 @@ On Unraid, make sure the external Docker network exists first:
 docker network create romm
 ```
 
-The template uses port `8766` and mounts `/var/run/docker.sock` so romm-link can discover RomM and emulator containers. It also reads Docker port bindings to generate browser-facing emulator links, so Unraid host ports can differ while internal container ports stay at `3000`. Generated emulator browser links default to `http` via `EMULATOR_BROWSER_SCHEME=http`; change it only if your emulator host ports actually serve HTTPS.
+The template uses port `8766` and mounts `/var/run/docker.sock` so romm-link can discover RomM and emulator containers, read Docker port bindings, and execute emulator launch commands inside those containers. Unraid host ports can differ while internal container ports stay at `3000`. Generated emulator browser links default to `http` via `EMULATOR_BROWSER_SCHEME=http`; change it only if your emulator host ports actually serve HTTPS.
+
+Direct ROM launch assumes RomM reports paths under `ROMM_PATH_PREFIX=roms` and your emulator containers can see the same library at `EMULATOR_ROM_PATH_PREFIX=/roms`. For a RomM game path like `roms/wii/Game.rvz`, romm-link launches `/roms/wii/Game.rvz` inside the Dolphin container. Change these two variables if your containers use different mount points.
 
 ## Environment variables
 
@@ -96,6 +98,9 @@ PCSX2_WEB_URL=http://pcsx2:3000
 RPCS3_WEB_URL=http://rpcs3:3000
 DOLPHIN_WEB_URL=http://dolphin:3000
 EMULATOR_BROWSER_SCHEME=http
+ROMM_PATH_PREFIX=roms
+EMULATOR_ROM_PATH_PREFIX=/roms
+EMULATOR_DISPLAY=:1
 ROMM_LINK_CONFIG_PATH=/config/settings.json
 ```
 
@@ -125,6 +130,6 @@ http://dolphin:3000
 ## Milestones
 
 - v0.1: Discovery, health dashboard, Docker integration, RomM status integration, Unraid template
-- v0.2: Emulator launch, ROM launch, BIOS detection
+- v0.2: Direct emulator ROM launch, BIOS detection
 - v0.3: Streaming/session management
 - v1.0: Production release

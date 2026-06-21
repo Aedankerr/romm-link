@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
-from backend.app import discovery, romm
+from backend.app import discovery, emulator_launch, romm
 from backend.app.launcher import enrich_games_with_emulators, route_for_game
 from backend.app.settings import get_settings, runtime_config_public, save_runtime_config
 
@@ -82,7 +82,7 @@ async def launch_rom(rom_id: int, request: Request):
             browser_host=request.url.hostname,
             scheme=settings.emulator_browser_scheme,
         )
-        return route_for_game(game, detected)
+        return emulator_launch.launch_game(game, detected, settings)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
@@ -242,7 +242,7 @@ def index():
       }
       async function launchGame(id) {
         const status = document.getElementById('launch-status');
-        status.textContent = 'Opening emulator...';
+        status.textContent = 'Launching ROM...';
         status.className = 'hint';
         const res = await fetch(`/api/launch/${id}`, { method: 'POST' });
         const route = await res.json();
@@ -274,7 +274,7 @@ def index():
           el.innerHTML = `<div class="game-list">${games.map((game) => `
             <div class="game">
               <div><strong>${escapeHtml(game.name)}</strong><small>${escapeHtml(game.platform || 'Unknown platform')} ${game.emulator_key ? '→ ' + escapeHtml(game.emulator_key) : ''}</small></div>
-              ${game.supported ? `<button onclick="launchGame(${Number(game.id)})">Open ${escapeHtml(game.emulator_key)}</button>` : '<span class="warn">Unsupported</span>'}
+              ${game.supported ? `<button onclick="launchGame(${Number(game.id)})">Launch ${escapeHtml(game.emulator_key)}</button>` : '<span class="warn">Unsupported</span>'}
             </div>
           `).join('')}</div>`;
         } catch (err) {

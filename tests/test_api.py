@@ -260,21 +260,35 @@ def test_romm_games_endpoint_enriches_games_with_launch_urls(monkeypatch):
     ]
 
 
-def test_launch_endpoint_returns_open_emulator_plan(monkeypatch):
-    from backend.app import discovery, romm
+def test_launch_endpoint_executes_emulator_and_returns_launch_rom_plan(monkeypatch):
+    from backend.app import discovery, emulator_launch, romm
 
     async def fake_rom(settings, rom_id):
-        return {"id": rom_id, "name": "Gran Turismo 4", "platform": "PlayStation 2"}
+        return {"id": rom_id, "name": "Gran Turismo 4.iso", "platform": "PlayStation 2", "path": "roms/ps2"}
 
     def fake_discovery(settings, browser_host=None, scheme="http"):
-        return {"emulators": [{"key": "pcsx2", "browser_url": "http://192.168.1.10:3000"}]}
+        return {"emulators": [{"key": "pcsx2", "name": "pcsx2", "browser_url": "http://192.168.1.10:3000"}]}
+
+    def fake_launch(game, discovered, settings):
+        return {
+            "supported": True,
+            "action": "launch_rom",
+            "emulator_key": "pcsx2",
+            "launch_url": "http://192.168.1.10:3000",
+            "rom_path": "/roms/ps2/Gran Turismo 4.iso",
+            "message": "Started pcsx2 for Gran Turismo 4.iso. Opening emulator UI...",
+        }
 
     monkeypatch.setattr(romm, "fetch_rom", fake_rom)
     monkeypatch.setattr(discovery, "discover_docker", fake_discovery)
+    monkeypatch.setattr(emulator_launch, "launch_game", fake_launch)
     client = TestClient(app)
 
     response = client.post("/api/launch/1")
 
     assert response.status_code == 200
-    assert response.json()["launch_url"] == "http://192.168.1.10:3000"
-    assert response.json()["emulator_key"] == "pcsx2"
+    body = response.json()
+    assert body["action"] == "launch_rom"
+    assert body["launch_url"] == "http://192.168.1.10:3000"
+    assert body["emulator_key"] == "pcsx2"
+    assert body["rom_path"] == "/roms/ps2/Gran Turismo 4.iso"

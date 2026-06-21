@@ -17,6 +17,9 @@ services:
       RPCS3_WEB_URL: "http://rpcs3:3000"
       DOLPHIN_WEB_URL: "http://dolphin:3000"
       EMULATOR_BROWSER_SCHEME: "http"
+      ROMM_PATH_PREFIX: "roms"
+      EMULATOR_ROM_PATH_PREFIX: "/roms"
+      EMULATOR_DISPLAY: ":1"
       ROMM_LINK_CONFIG_PATH: "/config/settings.json"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

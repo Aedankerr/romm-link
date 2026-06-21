@@ -53,12 +53,21 @@ def _extract_platform_name(raw: dict[str, Any]) -> str | None:
 
 
 def normalize_rom(raw: dict[str, Any]) -> dict[str, Any]:
-    return {
+    normalized = {
         "id": raw.get("id"),
         "name": raw.get("name") or raw.get("fs_name") or raw.get("file_name") or "Unknown ROM",
         "platform": _extract_platform_name(raw),
         "path": raw.get("path") or raw.get("fs_path") or raw.get("file_path"),
     }
+    for source_key, target_key in (
+        ("file_path", "file_path"),
+        ("fs_path", "file_path"),
+        ("file_name", "file_name"),
+        ("fs_name", "file_name"),
+    ):
+        if raw.get(source_key) and target_key not in normalized:
+            normalized[target_key] = raw[source_key]
+    return normalized
 
 
 def _items(data: Any) -> list[dict[str, Any]]:
@@ -70,6 +79,16 @@ def _items(data: Any) -> list[dict[str, Any]]:
             if isinstance(value, list):
                 return value
     return []
+
+
+def _single_item(data: Any) -> dict[str, Any]:
+    if isinstance(data, dict):
+        for key in ("rom", "item", "data", "result"):
+            value = data.get(key)
+            if isinstance(value, dict):
+                return value
+        return data
+    return {}
 
 
 async def fetch_romm_status(settings: Settings | None = None) -> dict[str, Any]:
@@ -114,4 +133,4 @@ async def fetch_roms(settings: Settings | None = None) -> list[dict[str, Any]]:
 
 async def fetch_rom(settings: Settings | None, rom_id: int) -> dict[str, Any]:
     settings = settings or get_settings()
-    return normalize_rom(await _get_json(settings, f"roms/{rom_id}"))
+    return normalize_rom(_single_item(await _get_json(settings, f"roms/{rom_id}")))
