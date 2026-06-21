@@ -159,6 +159,7 @@ def index():
         </section>
         <section class="card">
           <h2>Games</h2>
+          <div id="launch-status" class="hint"></div>
           <div id="games">Loading...</div>
         </section>
       </div>
@@ -240,12 +241,24 @@ def index():
         return String(value ?? '').replace(/[&<>'"]/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
       }
       async function launchGame(id) {
+        const status = document.getElementById('launch-status');
+        status.textContent = 'Opening emulator...';
+        status.className = 'hint';
         const res = await fetch(`/api/launch/${id}`, { method: 'POST' });
         const route = await res.json();
+        if (!res.ok || !route.supported) {
+          status.textContent = route.message || JSON.stringify(route);
+          status.className = 'warn';
+          return;
+        }
         if (route.launch_url) {
           window.open(route.launch_url, '_blank', 'noopener');
+          status.textContent = route.message || `Opened ${route.emulator_key}.`;
+          status.className = 'ok';
+          return;
         }
-        alert(route.message || JSON.stringify(route));
+        status.textContent = route.message || JSON.stringify(route);
+        status.className = 'warn';
       }
       async function loadGames() {
         const el = document.getElementById('games');
@@ -261,7 +274,7 @@ def index():
           el.innerHTML = `<div class="game-list">${games.map((game) => `
             <div class="game">
               <div><strong>${escapeHtml(game.name)}</strong><small>${escapeHtml(game.platform || 'Unknown platform')} ${game.emulator_key ? '→ ' + escapeHtml(game.emulator_key) : ''}</small></div>
-              ${game.supported ? `<button onclick="launchGame(${Number(game.id)})">Open emulator</button>` : '<span class="warn">Unsupported</span>'}
+              ${game.supported ? `<button onclick="launchGame(${Number(game.id)})">Open ${escapeHtml(game.emulator_key)}</button>` : '<span class="warn">Unsupported</span>'}
             </div>
           `).join('')}</div>`;
         } catch (err) {
