@@ -57,9 +57,15 @@ def test_health_reports_service_and_configured_romm_url(monkeypatch):
 
 
 def test_config_uses_docker_dns_defaults_not_ip_addresses(monkeypatch):
+    from backend.app.settings import reset_settings_cache
+
     monkeypatch.delenv("PCSX2_WEB_URL", raising=False)
     monkeypatch.delenv("RPCS3_WEB_URL", raising=False)
     monkeypatch.delenv("DOLPHIN_WEB_URL", raising=False)
+    monkeypatch.delenv("PCSX2_BROWSER_URL", raising=False)
+    monkeypatch.delenv("RPCS3_BROWSER_URL", raising=False)
+    monkeypatch.delenv("DOLPHIN_BROWSER_URL", raising=False)
+    reset_settings_cache()
     client = TestClient(app)
 
     response = client.get("/api/config")
@@ -137,6 +143,33 @@ def test_docker_discovery_reports_browser_urls_from_host_port_bindings(monkeypat
         "http://192.168.1.10:3001",
         "http://192.168.1.10:3002",
     ]
+
+
+def test_docker_discovery_uses_explicit_browser_url_override(monkeypatch):
+    from backend.app import discovery
+
+    fake_client = FakeDockerClient(
+        [
+            FakeContainer("romm", "rommapp/romm:latest"),
+            FakeContainer(
+                "dolphin",
+                "lscr.io/linuxserver/dolphin",
+                ports={"3000/tcp": [{"HostIp": "0.0.0.0", "HostPort": "3004"}]},
+            ),
+        ]
+    )
+    monkeypatch.setattr(discovery, "get_docker_client", lambda: fake_client)
+    monkeypatch.setenv("DOLPHIN_BROWSER_URL", "https://dolphin.example.test")
+    from backend.app.settings import reset_settings_cache
+    reset_settings_cache()
+    client = TestClient(app)
+
+    response = client.get("/api/discovery/docker", headers={"host": "192.168.1.10:8766"})
+
+    assert response.status_code == 200
+    emulator = response.json()["emulators"][0]
+    assert emulator["web_url"] == "http://dolphin:3000"
+    assert emulator["browser_url"] == "https://dolphin.example.test"
 
 
 def test_docker_discovery_defaults_browser_urls_to_http_even_when_romm_link_uses_https(monkeypatch):

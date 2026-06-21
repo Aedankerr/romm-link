@@ -83,6 +83,8 @@ The template uses port `8766` and mounts `/var/run/docker.sock` so romm-link can
 
 Direct ROM launch assumes RomM reports paths under `ROMM_PATH_PREFIX=roms` and your emulator containers can see the same library at `EMULATOR_ROM_PATH_PREFIX=/roms`. For a RomM game path like `roms/wii/Game.rvz`, romm-link launches `/roms/wii/Game.rvz` inside the Dolphin container. Change these two variables if your containers use different mount points.
 
+Selkies-based emulator WebUIs require a trusted secure browser origin. If raw `http://IP:PORT` opens a blank Selkies screen with "This application requires a secure connection" and `https://IP:PORT` cannot be bypassed, put the emulator behind a trusted HTTPS reverse proxy and set the matching browser URL override, for example `DOLPHIN_BROWSER_URL=https://dolphin.example.com`. Keep `DOLPHIN_WEB_URL=http://dolphin:3000` for Docker-internal discovery.
+
 ## Environment variables
 
 ```env
@@ -97,6 +99,9 @@ DOLPHIN_CONTAINER=dolphin
 PCSX2_WEB_URL=http://pcsx2:3000
 RPCS3_WEB_URL=http://rpcs3:3000
 DOLPHIN_WEB_URL=http://dolphin:3000
+PCSX2_BROWSER_URL=
+RPCS3_BROWSER_URL=
+DOLPHIN_BROWSER_URL=
 EMULATOR_BROWSER_SCHEME=http
 ROMM_PATH_PREFIX=roms
 EMULATOR_ROM_PATH_PREFIX=/roms

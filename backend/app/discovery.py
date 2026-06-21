@@ -90,6 +90,7 @@ def _discovered_container(
     web_url: str | None = None,
     browser_host: str | None = None,
     scheme: str = "http",
+    browser_url: str | None = None,
 ) -> DiscoveredContainer:
     return DiscoveredContainer(
         key=key,
@@ -98,7 +99,7 @@ def _discovered_container(
         status=getattr(container, "status", "unknown"),
         networks=_container_networks(container),
         web_url=web_url,
-        browser_url=_host_port_url(container, web_url, browser_host, scheme),
+        browser_url=browser_url or _host_port_url(container, web_url, browser_host, scheme),
     )
 
 
@@ -148,6 +149,7 @@ def discover_docker(
                     web_url=config["web_url"],
                     browser_host=browser_host,
                     scheme=scheme,
+                    browser_url=config.get("browser_url"),
                 ).as_dict()
             )
 
